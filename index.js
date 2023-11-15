@@ -1,6 +1,5 @@
 const express = require('express');
 const dbConnect = require('./dbConnect');
-const generateKeys = require('./helpers/generateKeys');
 require('dotenv').config();
 require('./helpers/errorHandler');
 

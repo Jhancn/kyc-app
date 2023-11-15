@@ -1,6 +1,5 @@
 const AWS = require('aws-sdk');
-const Rekognition = require("aws-sdk/clients/rekognition"); 
-const mongoFunctions = require('./mongoFunctions');
+const Rekognition = require("aws-sdk/clients/rekognition");
 
 AWS.config.update({
     accessKeyId: process.env.AWS_ACCESS_KEY,
