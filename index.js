@@ -1,11 +1,11 @@
 const express = require('express');
 const dbConnect = require('./dbConnect');
+const generateKeys = require('./helpers/generateKeys');
 require('dotenv').config();
 require('./helpers/errorHandler');
 
 // app
 const app = express()
-
 
 // middlewares
 require('./helpers/middlewares')(app, express)

@@ -30,7 +30,10 @@ module.exports = {
                 is: 'IND',
                 then: Joi.valid('aadhaar', 'pan', 'dl').required(),
                 otherwise: Joi.valid('dl', 'ump').required()
-            })
+            }),
+            selfie: Joi.string().required(),
+            document: Joi.string().required(),
+            documentBack: Joi.string().optional().allow(''),
         })
 
         return schema.validate(data)

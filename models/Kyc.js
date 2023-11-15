@@ -6,8 +6,8 @@ const kycSchema = mongoose.Schema({
     country: { type: String, required: true },
     documentCode: { type: String, required: true },
     selfie: { type: String, required: true },
-    document1: { type: String, required: true, default: "" },
-    document2: { type: String, default: "" }
+    document: { type: String, required: true, default: "" },
+    documentBack: { type: String, default: "" }
 }, {
     timestamps: true
 })

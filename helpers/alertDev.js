@@ -1,5 +1,5 @@
 const axios = require('axios');
-require('dotenv').config()
+require('dotenv').config();
 
 const sendMessage = async (message, chat_id, bot_api_token) => {
     let formattedMessage = `<b>${message}</b>`
