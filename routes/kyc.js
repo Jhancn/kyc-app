@@ -13,7 +13,7 @@ const kyc = express.Router()
 // @METHOD: POST
 // @ROUTE: /kyc/get_sessionId
 // @DESC: To Get Session Id for face liveness
-kyc.post('/get_sessioId', asyncFun (async (req, res) => {
+kyc.post('/get_sessionId', asyncFun (async (req, res) => {
     // get sessionId from faceLineness
     const sessionId = await faceLiveness.get_sessionId()
     if(!sessionId) return res.status(400).send('No sessionId created')
@@ -27,7 +27,6 @@ kyc.post('/get_sessioId', asyncFun (async (req, res) => {
 kyc.post('/get_sessionResults', asyncFun (async (req, res) => {
     // get payload
     const payload = req.body
-    console.log(payload);
 
     // joi validations
     const { error } = validations.validateSessionId(payload)
@@ -36,8 +35,21 @@ kyc.post('/get_sessionResults', asyncFun (async (req, res) => {
     // get sessionResults
     const sessionResults = await faceLiveness.get_sessionResults(payload.sessionId)
     if(!sessionResults) return res.status( 400).send('No sessionResults found')
+    if(sessionResults.Status === 'EXPIRED') return res.status(400).send('Your Session Id Is Expired')
+    if(sessionResults.Status === 'CREATED') return res.status(400).send('No Face Liveness Session Created With Your Session Id')
 
-    return res.status(200).json(sessionResults)
+    // convert image in buffer array to base64 string in sessionResults
+    const bytesArray = sessionResults.ReferenceImage.Bytes
+    const buffer = Buffer.from(bytesArray)
+    const base64Img = buffer.toString('base64')
+
+    // create referenceImage and assign base64 image to data
+    const referenceImage = {
+        BoundingBox: sessionResults.ReferenceImage.BoundingBox,
+        data: base64Img
+    }
+
+    return res.status(200).json({ ...sessionResults, ReferenceImage: referenceImage })
 }))
 
 // @METHOD: POST
@@ -114,6 +126,6 @@ kyc.post('/', upload.fields([
     const kyc = await mongoFunctions.create('Kyc', kycData)
 
     return res.status(200).send('success')
-}))
+}));
 
 module.exports = kyc

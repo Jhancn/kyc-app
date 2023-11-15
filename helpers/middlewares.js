@@ -6,8 +6,8 @@ const morgan = require('morgan')
 
 const rateLimit = limitter({
     windowMs: 1000,
-    max: 1,
-    message: 'You can only send 1 request per 1 second'
+    max: 3,
+    message: 'You can only send 3 requests per 1 second'
 })
 
 module.exports = (app, express) => {
