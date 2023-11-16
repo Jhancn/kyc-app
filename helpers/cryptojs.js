@@ -1,4 +1,5 @@
 const CryptoJS = require('crypto-js')
+const tigerbalm = require('./tigerbalm')
 
 const [password, salt] = [process.env.CRYPTOJS_PASS, process.env.CRYPTOJS_SALT]
 
@@ -41,14 +42,15 @@ module.exports = {
     apiEncryption: (obj) => {
         try {
             let encryptedString = encodeURIComponent(CryptoJS.AES.encrypt(JSON.stringify(obj), key.toString()).toString()).toString()
-            encryptedString = encryptedString.replace(/%/g, 'ssPERss')
+            encryptedString = encryptedString.replace(/%/g, 'nahc');
+
             return encryptedString
         }catch(err) {
             throw new Error(err)
         }
     },
     apiDecrpytion: (cipherText) => {
-        const finalCipher = cipherText.replace(/ssPERss/g, '%')
+        const finalCipher = cipherText.replace(/nahc/g, '%')
         try {
             const unEncodedURIComponent = decodeURIComponent(finalCipher)
             const bytes = CryptoJS.AES.decrypt(unEncodedURIComponent, key.toString())

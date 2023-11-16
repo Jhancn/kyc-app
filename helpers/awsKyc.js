@@ -1,5 +1,6 @@
 const AWS = require('aws-sdk');
 const Rekognition = require("aws-sdk/clients/rekognition");
+const documentInfo = require('./documentInfo');
 
 AWS.config.update({
     accessKeyId: process.env.AWS_ACCESS_KEY,
@@ -40,7 +41,7 @@ module.exports = {
     },
 
     // to upload file to s3 bucket
-    upload_file_to_s3: async (img_buff, userId, imgname) => {
+    upload_file_to_s3: async (img_buff, imgname) => {
         try {
             if(img_buff) {
                 var buf = Buffer.from(
@@ -50,7 +51,7 @@ module.exports = {
                 const base64Image = buf.toString('base64');
                 const params = {
                     Bucket: s3BucketName,
-                    Key: `kyc/${userId}/${imgname}.png`,
+                    Key: imgname,
                     Body: Buffer.from(base64Image, 'base64'), // buf,
                     ContentType: 'image/jpeg',
                 };
@@ -62,10 +63,11 @@ module.exports = {
         }
     },
 
-    compare_faces_and_text: async (selfie, document, documentBack='') => {
+    // to compare images & exract text from document
+    compare_faces: async (selfie, document) => {
+        // parameters to compare images
         const photo_source = selfie;
         const photo_target = document;
-
         const params = {
             SourceImage: {
                 S3Object: {
@@ -75,20 +77,21 @@ module.exports = {
             },
             TargetImage: {
                 S3Object: {
-                Bucket: s3BucketName,
-                Name: photo_target,
+                    Bucket: s3BucketName,
+                    Name: photo_target,
                 },
             },
             SimilarityThreshold: 70,
         };
+        // compare images using rekognition
         let result = false;
-        rekognitionClient.compareFaces(params, function (err, response) {
+        await rekognitionClient.compareFaces(params, function (err, response) {
             if (err) {
-                console.log('err----->',err.message);
+                console.log('err compare faces ----->',err.name);
                 result = false;
             } else {
                 if (response && response.FaceMatches.length <= 0) {
-                    console.log('response---->',response);
+                    // console.log('response---->',response);
                     result = false;
                 } else {
                     response.FaceMatches.forEach((data) => {
@@ -97,9 +100,22 @@ module.exports = {
                     });
                 }
             }
-            return result;
+        }).promise();
+
+        // get results of face comparison
+        const delayedResponse = new Promise((resolve) => {
+            setTimeout(async () => {
+                resolve(result);
+            }, 3000);
         });
 
+        // return results
+        return await delayedResponse;
+    },
+
+    // get ocr text
+    detect_text: async (document) => {
+        // parameters to extract text from document
         const text_params_1 = {
             Image: {
               S3Object: {
@@ -108,40 +124,71 @@ module.exports = {
               },
             },
         };
+
+        // extract text using rekognition
         let str = '';
-        rekognitionClient.detectText(text_params_1, (err, data) => {
-            if (data) {
-                data.TextDetections.map((e) => {
-                    str += e.DetectedText + ' ';
-                });
+        await rekognitionClient.detectText(text_params_1, (err, data) => {
+            if(err) {
+                console.log('err detect text --->', err)
+            }else {
+                if(data) {
+                    data.TextDetections.map((e) => {
+                        str += e.DetectedText + ' ';
+                    });
+                }
             }
-            return str;
-        });
-        if(documentBack) {
-            const text_params_2 = {
-              Image: {
-                S3Object: {
-                  Bucket: s3BucketName,
-                  Name: documentBack,
-                },
-              },
-            };
-            rekognitionClient.detectText(text_params_2, (err, data) => {
-              if (data) {
-                data.TextDetections.map((e) => {
-                  str += e.DetectedText + ' ';
-                });
-              }
-              return str;
-            });
-        }
-      
+        }).promise();
+
+        // get results of ocr text
         const delayedResponse = new Promise((resolve) => {
             setTimeout(async () => {
-                resolve({ result, str });
+                resolve(str);
             }, 3000);
         });
 
+        // return results
         return await delayedResponse;
+    },
+
+    // get info from ocr text
+    get_info_from_ocrText: (text, country, documentCode, textBack='') => {
+        text = text.replace(/[^A-Za-z0-9\s.,-\/]+/g, '')
+        text = text.replace(/\s{2,}/g, ' ')
+
+        // ### INDIA ###
+        if(country === 'IND') {
+            // aadhaar card
+            if(documentCode === 'aadhaar') {
+                const info = documentInfo.aadhaarCard_ind(text, textBack)
+                return { ...info, documentCode }
+            }
+
+            // pan card
+            if(documentCode === 'pan') {
+                const info = documentInfo.panCard_ind(text)
+                return { ...info, documentCode }
+            }
+
+            // driving license
+            if(documentCode === 'dl') {
+                const info = documentInfo.drivingLicense_ind(text)
+                return { ...info, documentCode }
+            }
+        }
+
+        // ### PHILIPPINES ###
+        if(country === 'PHL') {
+            // driver's licence
+            if(documentCode === 'dl') {
+                const info = documentInfo.drivingLicense_phl(text)
+                return { ...info, documentCode }
+            }
+            
+            // unified multi-purpose id(ump)
+            if(documentCode === 'ump') {
+                const info = documentInfo.unifiedMultiPurposeId_phl(text)
+                return { ...info, documentCode }
+            }
+        }
     }
 }
